@@ -3,7 +3,7 @@ import postgres from 'postgres';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_POSTGRES_URL;
 if (!url) {
   // Primer despliegue sin base de datos: se compila igual y las tablas se crean en el siguiente despliegue.
   console.warn('Aviso: falta DATABASE_URL. Conecta Neon en la pestaña Storage de Vercel y vuelve a desplegar.');

@@ -15,7 +15,7 @@ function sinBase(): postgres.Sql {
 }
 
 function crear() {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_POSTGRES_URL;
   if (!url) return sinBase();
   const local = /localhost|127\.0\.0\.1/.test(url);
   return postgres(url, {
@@ -30,5 +30,5 @@ function crear() {
   });
 }
 
-const conUrl = Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL);
+const conUrl = Boolean(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_POSTGRES_URL);
 export const sql: postgres.Sql = globalThis.__sql ?? (conUrl ? (globalThis.__sql = crear()) : crear());
