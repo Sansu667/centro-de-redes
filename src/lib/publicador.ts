@@ -20,9 +20,9 @@ export async function publicarAhora(publicacionId: string, usuarioId: string | n
 
   const medios = await mediosDe(publicacionId);
   const destinos = await sql`
-    select d.id, d.cuenta_id, d.texto_propio, d.estado, c.red, c.nombre
+    select d.id, d.cuenta_id, d.texto_propio, d.estado, c.red, c.nombre, c.modo
     from destinos_publicacion d join cuentas_sociales c on c.id = d.cuenta_id
-    where d.publicacion_id = ${publicacionId} and d.estado <> 'publicada'
+    where d.publicacion_id = ${publicacionId} and d.estado not in ('publicada', 'manual')
   `;
 
   let ok = 0;
@@ -33,6 +33,11 @@ export async function publicarAhora(publicacionId: string, usuarioId: string | n
     if (problemas.length) {
       fallas++;
       await sql`update destinos_publicacion set estado = 'fallida', error = ${problemas.join(' ')} where id = ${d.id}`;
+      continue;
+    }
+    if (d.modo === 'manual') {
+      // Queda lista en la página de la publicación para que alguien la publique en la red y pegue el enlace.
+      await sql`update destinos_publicacion set estado = 'manual', error = null where id = ${d.id}`;
       continue;
     }
     await sql`update destinos_publicacion set estado = 'publicando', error = null where id = ${d.id}`;
@@ -63,14 +68,19 @@ export async function publicarAhora(publicacionId: string, usuarioId: string | n
     }
   }
 
-  const [{ publicadas, total }] = await sql`
-    select count(*) filter (where estado = 'publicada')::int as publicadas, count(*)::int as total
-    from destinos_publicacion where publicacion_id = ${publicacionId}
-  `;
-  const estado = publicadas === total ? 'publicada' : publicadas === 0 ? 'fallida' : 'parcial';
+  const estado = await estadoSegunDestinos(publicacionId);
   await sql`update publicaciones set estado = ${estado}, actualizada_en = now() where id = ${publicacionId}`;
   await registrar(usuarioId, 'publicacion.publicada', 'publicacion', publicacionId, { estado, exitosas: ok, fallidas: fallas });
   return { estado, ok, fallas };
+}
+
+/** Las que esperan publicación manual cuentan como listas: la app ya hizo su parte. */
+export async function estadoSegunDestinos(publicacionId: string) {
+  const [{ listas, total }] = await sql`
+    select count(*) filter (where estado in ('publicada', 'manual'))::int as listas, count(*)::int as total
+    from destinos_publicacion where publicacion_id = ${publicacionId}
+  `;
+  return listas === total ? 'publicada' : listas === 0 ? 'fallida' : 'parcial';
 }
 
 /** Publica todo lo programado cuya hora ya llegó. Lo llaman el cron y las visitas a la app. */

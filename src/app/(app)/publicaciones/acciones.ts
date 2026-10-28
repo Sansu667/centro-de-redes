@@ -10,7 +10,7 @@ import { registrar } from '@/lib/bitacora';
 import { autoaprobacionPermitida } from '@/lib/ajustes';
 import { problemasParaRed, INFO_RED, type Red, type TipoPublicacion } from '@/lib/redes';
 import { desdeBogota } from '@/lib/formato';
-import { publicarAhora } from '@/lib/publicador';
+import { estadoSegunDestinos, publicarAhora } from '@/lib/publicador';
 
 export type EstadoForm = { error?: string; problemas?: string[] } | undefined;
 
@@ -247,4 +247,31 @@ export async function eliminar(id: string): Promise<void> {
   await registrar(u.id, 'publicacion.eliminada', 'publicacion', id, { titulo: p.titulo });
   revalidatePath('/', 'layout');
   redirect('/publicaciones');
+}
+
+/** Registra el enlace de un post que alguien publicó a mano (X sin API). */
+export async function marcarManual(destinoId: string, _: { error?: string } | undefined, form: FormData): Promise<{ error?: string } | undefined> {
+  const u = await usuarioParaAccion('crear_publicacion');
+  uuid.parse(destinoId);
+  const url = String(form.get('url') ?? '').trim();
+  const m = url.match(/^https:\/\/(?:www\.|mobile\.)?(?:x|twitter)\.com\/([A-Za-z0-9_]{1,15})\/status\/(\d{5,25})(?:[/?#].*)?$/);
+  if (!m) return { error: 'Pega el enlace del post, con la forma https://x.com/usuario/status/123…' };
+  const limpio = `https://x.com/${m[1]}/status/${m[2]}`;
+  const [d] = await sql`
+    update destinos_publicacion d set estado = 'publicada', id_externo = ${m[2]}, url_externa = ${limpio}, publicada_en = now(), error = null
+    from publicaciones p
+    where d.id = ${destinoId} and d.estado = 'manual' and p.id = d.publicacion_id
+    returning d.publicacion_id, d.cuenta_id, coalesce(d.texto_propio, p.texto) as texto, p.tipo
+  `;
+  if (!d) return { error: 'Esta red ya estaba marcada como publicada o no espera publicación manual.' };
+  await sql`
+    insert into publicaciones_externas (cuenta_id, id_externo, url, texto, tipo, publicada_en)
+    values (${d.cuenta_id}, ${m[2]}, ${limpio}, ${String(d.texto).slice(0, 2000)}, ${d.tipo}, now())
+    on conflict (cuenta_id, id_externo) do nothing
+  `;
+  const estado = await estadoSegunDestinos(d.publicacion_id);
+  await sql`update publicaciones set estado = ${estado}, actualizada_en = now() where id = ${d.publicacion_id} and estado <> 'publicando'`;
+  await registrar(u.id, 'publicacion.manual_publicada', 'publicacion', d.publicacion_id, { url: limpio });
+  revalidatePath('/', 'layout');
+  return undefined;
 }

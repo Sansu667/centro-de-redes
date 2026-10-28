@@ -11,7 +11,8 @@ import { fechaHora } from '@/lib/formato';
 import { EstadoPub } from '@/components/EstadoPub';
 import { ChipRed } from '@/components/IconoRed';
 import { AccionesPublicacion } from '@/components/AccionesPublicacion';
-import { aprobar, cancelarProgramacion, eliminar, enviarARevision, rechazar, reintentar } from '../acciones';
+import { PanelManual } from '@/components/PublicacionManual';
+import { aprobar, cancelarProgramacion, eliminar, enviarARevision, marcarManual, rechazar, reintentar } from '../acciones';
 
 export const metadata = { title: 'Publicación' };
 
@@ -24,6 +25,7 @@ const ACCIONES_BITACORA: Record<string, string> = {
   'publicacion.publicada': 'Resultado de la publicación',
   'publicacion.publicar_ahora': 'Pidió publicarla ahora',
   'publicacion.programacion_cancelada': 'Quitó la programación',
+  'publicacion.manual_publicada': 'Registró el post publicado a mano',
 };
 
 const ESTADO_DESTINO: Record<string, { nombre: string; clase: string }> = {
@@ -31,7 +33,13 @@ const ESTADO_DESTINO: Record<string, { nombre: string; clase: string }> = {
   publicando: { nombre: 'Publicando', clase: 'info' },
   publicada: { nombre: 'Publicada', clase: 'ok' },
   fallida: { nombre: 'Falló', clase: 'critico' },
+  manual: { nombre: 'Falta publicar a mano', clase: 'aviso' },
 };
+
+function textoManual(texto: string, enlace: string | null) {
+  const t = texto.trim();
+  return enlace && !t.includes(enlace) ? `${t} ${enlace}`.trim() : t;
+}
 
 export default async function Detalle({ params }: { params: Promise<{ id: string }> }) {
   const u = await requerirUsuario('ver');
@@ -79,6 +87,15 @@ export default async function Detalle({ params }: { params: Promise<{ id: string
           <TriangleAlert aria-hidden="true" />
           <span>
             <strong>{p.revisor ?? 'Un aprobador'} la rechazó:</strong> {p.motivo_rechazo}
+          </span>
+        </div>
+      )}
+
+      {destinos.some((d) => d.estado === 'manual') && (
+        <div className="aviso-caja alerta" role="status">
+          <TriangleAlert aria-hidden="true" />
+          <span>
+            <strong>Falta publicar en X a mano.</strong> Abajo, en “En cada red”, está el texto listo y el botón que abre X.
           </span>
         </div>
       )}
@@ -159,6 +176,14 @@ export default async function Detalle({ params }: { params: Promise<{ id: string
                             </a>
                           )}
                           {d.publicada_en && <div className="ayuda">{fechaHora(d.publicada_en)}</div>}
+                          {d.estado === 'manual' && puede(u.rol, 'crear_publicacion') && (
+                            <PanelManual
+                              texto={textoManual(d.texto_propio ?? p.texto, p.enlace)}
+                              usuario={d.usuario_red}
+                              medios={medios.map((m) => ({ id: m.id, nombre: m.nombre, url: m.urlInterna }))}
+                              accion={marcarManual.bind(null, d.id)}
+                            />
+                          )}
                         </td>
                       </tr>
                     ))}

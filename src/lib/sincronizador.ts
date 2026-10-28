@@ -5,6 +5,7 @@ import { cargarCuenta, conectorPara, marcarErrorCuenta } from './conectores';
 /** Trae métricas, publicaciones recientes y comentarios de una cuenta y los guarda. */
 export async function sincronizarCuenta(id: string) {
   const cuenta = await cargarCuenta(id);
+  if (cuenta.modo === 'manual') return { cuenta: cuenta.nombre, dias: 0, publicaciones: 0, comentariosNuevos: 0 };
   const conector = conectorPara(cuenta);
   const [{ n }] = await sql`select count(*)::int as n from metricas_diarias where cuenta_id = ${id}`;
   const dias = n < 30 ? 90 : 7;
@@ -80,7 +81,7 @@ export async function sincronizarCuenta(id: string) {
 }
 
 export async function sincronizarTodo() {
-  const cuentas = await sql`select id, nombre from cuentas_sociales where estado <> 'desactivada' order by red`;
+  const cuentas = await sql`select id, nombre from cuentas_sociales where estado <> 'desactivada' and modo <> 'manual' order by red`;
   const resultados = [];
   for (const c of cuentas) {
     try {

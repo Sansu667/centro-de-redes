@@ -57,3 +57,33 @@ export async function eliminarCuenta(id: string): Promise<void> {
   await registrar(u.id, 'cuenta.eliminada', 'cuenta', id, { red: c.red, nombre: c.nombre, modo: c.modo });
   revalidatePath('/', 'layout');
 }
+
+const esquemaManual = z.object({
+  red: z.literal('x'),
+  nombre: z.string().trim().min(2, 'Escribe el nombre de la cuenta.').max(100),
+  usuario: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/^@/, '').replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '').replace(/\/.*$/, ''))
+    .refine((v) => /^[A-Za-z0-9_]{1,15}$/.test(v), 'El usuario de X tiene hasta 15 letras, números o guiones bajos.'),
+});
+
+export type EstadoManual = { error?: string } | undefined;
+
+/** Registra una cuenta que se publica a mano (X sin API de pago). */
+export async function crearManual(_: EstadoManual, form: FormData): Promise<EstadoManual> {
+  const u = await usuarioParaAccion('gestionar_cuentas');
+  const d = esquemaManual.safeParse({ red: form.get('red'), nombre: form.get('nombre'), usuario: form.get('usuario') });
+  if (!d.success) return { error: d.error.issues[0].message };
+  const usuario = '@' + d.data.usuario;
+  const [ya] = await sql`select id from cuentas_sociales where red = ${d.data.red} and modo <> 'demo'`;
+  if (ya) return { error: 'Ya hay una cuenta de X registrada. Quítala primero si quieres cambiarla.' };
+  await sql`delete from cuentas_sociales where red = ${d.data.red} and modo = 'demo'`;
+  const [c] = await sql`
+    insert into cuentas_sociales (red, nombre, usuario_red, id_externo, modo, conectada_por)
+    values (${d.data.red}, ${d.data.nombre}, ${usuario}, ${'manual_' + d.data.usuario.toLowerCase()}, 'manual', ${u.id}) returning id
+  `;
+  await registrar(u.id, 'cuenta.manual_creada', 'cuenta', c.id, { red: d.data.red, usuario });
+  revalidatePath('/', 'layout');
+  return undefined;
+}

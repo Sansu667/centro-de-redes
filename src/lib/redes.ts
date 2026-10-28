@@ -69,6 +69,7 @@ export const INFO_RED: Record<Red, InfoRed> = {
     requiereMedio: { video: 'video' },
     maxArchivos: 4,
     ocultaComentarios: true,
+    nota: 'X se publica a mano: al publicar, la app deja el texto listo y un botón que abre X con él. Las imágenes se adjuntan en X.',
   },
 };
 

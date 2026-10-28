@@ -6,7 +6,7 @@ export type CuentaConectada = {
   nombre: string;
   usuario_red: string | null;
   id_externo: string | null;
-  modo: 'demo' | 'real';
+  modo: 'demo' | 'real' | 'manual';
   token: string | null;
   refresh: string | null;
   token_expira_en: Date | null;

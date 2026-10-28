@@ -18,8 +18,30 @@ const REALES: Record<Red, Conector> = {
   x: conectorX,
 };
 
+/** Cuenta que se publica a mano: no hay API, así que no se lee ni se publica nada desde la app. */
+const conectorManual: Conector = {
+  async publicar() {
+    throw new ErrorRed('Esta cuenta se publica a mano desde la página de la publicación.');
+  },
+  async publicacionesRecientes() {
+    return [];
+  },
+  async comentarios() {
+    return [];
+  },
+  async responder() {
+    throw new ErrorRed('Esta cuenta no está conectada por API: responde directamente en la red.');
+  },
+  async ocultar() {
+    throw new ErrorRed('Esta cuenta no está conectada por API: oculta el comentario directamente en la red.');
+  },
+  async metricas() {
+    return [];
+  },
+};
+
 export function conectorPara(c: CuentaConectada): Conector {
-  return c.modo === 'demo' ? conectorDemo : REALES[c.red];
+  return c.modo === 'demo' ? conectorDemo : c.modo === 'manual' ? conectorManual : REALES[c.red];
 }
 
 const REFRESCAR: Partial<Record<Red, (r: string) => Promise<{ token: string; expira: Date; refresh: string | null }>>> = {

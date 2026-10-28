@@ -7,7 +7,8 @@ import { urlBase } from '@/lib/medios';
 import { hace } from '@/lib/formato';
 import { IconoRed } from '@/components/IconoRed';
 import { BotonAccion } from '@/components/AccionesCuenta';
-import { activar, crearDemo, eliminarCuenta, sincronizar } from './acciones';
+import { FormCuentaManual } from '@/components/PublicacionManual';
+import { activar, crearDemo, crearManual, eliminarCuenta, sincronizar } from './acciones';
 
 export const metadata = { title: 'Cuentas de redes' };
 
@@ -85,15 +86,16 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
                           {c.usuario_red && <span className="ayuda">{c.usuario_red}</span>}
                           <span className={`etiqueta ${ESTADO_CUENTA[c.estado].clase}`}>{ESTADO_CUENTA[c.estado].nombre}</span>
                           {c.modo === 'demo' && <span className="etiqueta info">Demostración</span>}
+                          {c.modo === 'manual' && <span className="etiqueta info">Publicación a mano</span>}
                         </div>
                         <div className="ayuda">
-                          Sincronizada {hace(c.ultima_sincronizacion)}
+                          {c.modo === 'manual' ? 'Sin API: la app prepara el texto y alguien lo publica en X' : <>Sincronizada {hace(c.ultima_sincronizacion)}</>}
                           {c.conectada_por_nombre && ` · conectada por ${c.conectada_por_nombre}`}
                           {c.token_expira_en && c.modo === 'real' && red === 'linkedin' && ` · el acceso vence ${hace(c.token_expira_en).replace('hace ', 'en ')}`}
                         </div>
                         {c.ultimo_error && <div className="ayuda" style={{ color: 'var(--critico)' }}>{c.ultimo_error}</div>}
                         <div className="acciones" style={{ marginTop: 8 }}>
-                          {c.estado !== 'desactivada' && <BotonAccion accion={sincronizar.bind(null, c.id)} texto="Sincronizar" icono="sync" />}
+                          {c.estado !== 'desactivada' && c.modo !== 'manual' && <BotonAccion accion={sincronizar.bind(null, c.id)} texto="Sincronizar" icono="sync" />}
                           <BotonAccion
                             accion={activar.bind(null, c.id, c.estado === 'desactivada')}
                             texto={c.estado === 'desactivada' ? 'Reactivar' : 'Desactivar'}
@@ -113,7 +115,9 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
                 )}
               </div>
               <div className="acciones" style={{ justifyContent: 'flex-end' }}>
-                {listo ? (
+                {red === 'x' && !lista.some((c: any) => c.modo !== 'demo') ? (
+                  <FormCuentaManual accion={crearManual} />
+                ) : red === 'x' && !listo ? null : listo ? (
                   <a className="boton" href={`/api/oauth/${p}/inicio`}>
                     {lista.some((c: any) => c.modo === 'real') ? 'Reconectar' : 'Conectar'}
                   </a>
@@ -122,7 +126,7 @@ export default async function Cuentas({ searchParams }: { searchParams: Promise<
                     Falta configurar {PROVEEDORES[p].variables.join(' y ')}
                   </span>
                 )}
-                {lista.length === 0 && <BotonAccion accion={crearDemo.bind(null, red)} texto="Probar con demostración" icono="plus" />}
+                {lista.length === 0 && red !== 'x' && <BotonAccion accion={crearDemo.bind(null, red)} texto="Probar con demostración" icono="plus" />}
               </div>
             </div>
           );
