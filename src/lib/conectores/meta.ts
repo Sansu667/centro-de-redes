@@ -362,8 +362,14 @@ export function urlAutorizacionMeta(estado: string, redirect: string) {
     redirect_uri: redirect,
     state: estado,
     response_type: 'code',
-    scope: ALCANCES_META.join(','),
   });
+  // Las apps con "Inicio de sesión con Facebook para empresas" piden los permisos con una configuración (config_id).
+  if (process.env.META_CONFIG_ID) {
+    q.set('config_id', process.env.META_CONFIG_ID);
+    q.set('override_default_response_type', 'true');
+  } else {
+    q.set('scope', ALCANCES_META.join(','));
+  }
   return `https://www.facebook.com/${V()}/dialog/oauth?${q}`;
 }
 

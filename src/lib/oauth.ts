@@ -7,7 +7,7 @@ export const PROVEEDORES: Record<Proveedor, { nombre: string; redes: Red[]; vari
   meta: {
     nombre: 'Meta (Facebook e Instagram)',
     redes: ['facebook', 'instagram'],
-    variables: ['META_APP_ID', 'META_APP_SECRET'],
+    variables: ['META_APP_ID', 'META_APP_SECRET', 'META_CONFIG_ID'],
     consola: 'https://developers.facebook.com/apps',
   },
   google: {
