@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLICAS = ['/ingresar', '/configuracion-inicial', '/api/cron/', '/api/medios/'];
+const PUBLICAS = ['/ingresar', '/configuracion-inicial', '/privacidad', '/api/cron/', '/api/medios/'];
 const COOKIES = ['__Host-redes_sesion', 'redes_sesion'];
 
 export function proxy(request: NextRequest) {

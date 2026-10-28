@@ -23,7 +23,10 @@ export function MarcoIngreso({ children }: { children: React.ReactNode }) {
           <path d="M0 230 C130 214 260 244 380 228 S520 212 600 226 V300 H0Z" fill="#2e4532" />
           <path d="M0 60 C120 40 220 80 330 62 S520 38 600 58" fill="none" stroke="#c9e7a6" strokeOpacity=".35" strokeWidth="1.2" />
         </svg>
-        <p className="ingreso-credito">Uso exclusivo del equipo de comunicaciones del Departamento. Toda acción queda registrada.</p>
+        <p className="ingreso-credito">
+          Uso exclusivo del equipo de comunicaciones del Departamento. Toda acción queda registrada.{' '}
+          <a href="/privacidad" style={{ color: '#c9e7a6' }}>Política de privacidad</a>
+        </p>
       </section>
       <section className="ingreso-formulario">{children}</section>
     </main>

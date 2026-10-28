@@ -1657,3 +1657,39 @@ code {
 .comentario-item.nuevo::before {
   left: 8px;
 }
+
+/* ---------- Documentos públicos (privacidad) ---------- */
+
+.documento {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.documento-cabeza {
+  margin-bottom: 36px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--piedra-200);
+}
+
+.documento article h1 {
+  margin-bottom: 6px;
+}
+
+.documento article h2 {
+  font-size: var(--t-xl);
+  font-family: var(--serif);
+  margin: 32px 0 10px;
+}
+
+.documento article p,
+.documento article li {
+  line-height: 1.65;
+  max-width: 70ch;
+}
+
+.documento article ul {
+  padding-left: 22px;
+  display: grid;
+  gap: 8px;
+}
