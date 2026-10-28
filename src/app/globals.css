@@ -1614,6 +1614,9 @@ details.desplegable summary {
     padding: 28px 24px;
     min-height: 220px;
   }
+  .ingreso-estratos {
+    display: none;
+  }
   .ingreso-formulario {
     padding: 32px 24px;
   }
