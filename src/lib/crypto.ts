@@ -1,13 +1,17 @@
 import 'server-only';
-import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 /** Clave AES-256 para cifrar tokens de redes y secretos 2FA en la base de datos. */
+let claveDerivada: Buffer | null = null;
 function clave(): Buffer {
+  if (claveDerivada) return claveDerivada;
   const raw = process.env.ENCRYPTION_KEY;
-  if (!raw) throw new Error('Falta ENCRYPTION_KEY (32 bytes en base64)');
-  const k = Buffer.from(raw, 'base64');
-  if (k.length !== 32) throw new Error('ENCRYPTION_KEY debe ser de 32 bytes en base64');
-  return k;
+  if (!raw) throw new Error('Falta ENCRYPTION_KEY');
+  // Acepta 32 bytes en base64 o una frase larga, de la que se deriva la clave con scrypt.
+  const b = /^[A-Za-z0-9+/]{43}=$/.test(raw) ? Buffer.from(raw, 'base64') : null;
+  if (b && b.length === 32) return (claveDerivada = b);
+  if (raw.length < 32) throw new Error('ENCRYPTION_KEY debe tener al menos 32 caracteres');
+  return (claveDerivada = scryptSync(raw, 'centro-de-redes-filosofia-unal', 32));
 }
 
 /** Cifra con AES-256-GCM. Formato: v1.<iv>.<tag>.<datos> en base64url. */

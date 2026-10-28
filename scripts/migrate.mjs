@@ -5,8 +5,9 @@ import path from 'node:path';
 
 const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!url) {
-  console.error('Falta DATABASE_URL: conecta una base de datos Postgres antes de compilar.');
-  process.exit(1);
+  // Primer despliegue sin base de datos: se compila igual y las tablas se crean en el siguiente despliegue.
+  console.warn('Aviso: falta DATABASE_URL. Conecta Neon en la pestaña Storage de Vercel y vuelve a desplegar.');
+  process.exit(0);
 }
 const local = /localhost|127\.0\.0\.1/.test(url);
 const sql = postgres(url, { max: 1, onnotice: () => {}, ssl: local ? false : 'require', prepare: false });
