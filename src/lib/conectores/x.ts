@@ -5,6 +5,21 @@ import { ErrorRed, dia, haceDias, pedir } from './tipos';
 // X API v2 con OAuth 2.0 (PKCE). Leer menciones y respuestas requiere un plan de pago de la API de X.
 
 const API = 'https://api.x.com/2';
+
+/** En el plan gratuito de la API de X solo se puede publicar: las lecturas responden 403. */
+function sinAccesoDeLectura(e: unknown) {
+  const m = (e as Error)?.message ?? '';
+  return / 403|client-not-enrolled|Forbidden|not permitted/i.test(m);
+}
+
+async function leer<T>(f: () => Promise<T>, vacio: T): Promise<T> {
+  try {
+    return await f();
+  } catch (e) {
+    if (sinAccesoDeLectura(e)) return vacio;
+    throw e;
+  }
+}
 export const ALCANCES_X = ['tweet.read', 'tweet.write', 'users.read', 'offline.access', 'media.write'];
 
 function cab(c: CuentaConectada, extra: Record<string, string> = {}) {
@@ -109,10 +124,10 @@ export const conectorX: Conector = {
   },
 
   async publicacionesRecientes(cuenta) {
-    const r = await pedir(
+    const r = await leer(() => pedir(
       `${API}/users/${cuenta.id_externo}/tweets?max_results=25&exclude=replies,retweets&tweet.fields=created_at,public_metrics`,
       { headers: cab(cuenta) },
-    );
+    ), { data: [] } as any);
     const usuario = (cuenta.usuario_red ?? '').replace('@', '') || 'i';
     return (r.data ?? []).map(
       (t: any): PublicacionExterna => ({
@@ -131,10 +146,10 @@ export const conectorX: Conector = {
   },
 
   async comentarios(cuenta) {
-    const r = await pedir(
+    const r = await leer(() => pedir(
       `${API}/users/${cuenta.id_externo}/mentions?max_results=100&tweet.fields=created_at,conversation_id,in_reply_to_user_id,referenced_tweets,author_id&expansions=author_id&user.fields=username,name,profile_image_url`,
       { headers: cab(cuenta) },
-    );
+    ), { data: [] } as any);
     const usuarios = new Map<string, any>((r.includes?.users ?? []).map((u: any) => [u.id, u]));
     return (r.data ?? []).map((t: any): ComentarioEntrante => {
       const u = usuarios.get(t.author_id);
@@ -171,7 +186,10 @@ export const conectorX: Conector = {
   },
 
   async metricas(cuenta, dias) {
-    const yo = await pedir(`${API}/users/${cuenta.id_externo}?user.fields=public_metrics`, { headers: cab(cuenta) });
+    const yo = await leer(
+      () => pedir(`${API}/users/me?user.fields=public_metrics`, { headers: cab(cuenta) }),
+      { data: null } as any,
+    );
     const pubs = await conectorX.publicacionesRecientes(cuenta);
     const porDia = new Map<string, MetricaDia>();
     for (const p of pubs) {
@@ -190,7 +208,8 @@ export const conectorX: Conector = {
       salida.push(porDia.get(k) ?? { dia: k });
     }
     // X no da historial de seguidores: se guarda el valor de hoy y la serie se forma día a día.
-    salida[salida.length - 1].seguidores = yo.data?.public_metrics?.followers_count ?? 0;
+    const seg = yo.data?.public_metrics?.followers_count;
+    if (typeof seg === 'number') salida[salida.length - 1].seguidores = seg;
     return salida;
   },
 };
