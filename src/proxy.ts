@@ -30,7 +30,9 @@ export function proxy(request: NextRequest) {
     "img-src 'self' blob: data: https:",
     "media-src 'self' blob: https:",
     "font-src 'self'",
-    "connect-src 'self'",
+    // Las imágenes y videos se suben directo del navegador a Vercel Blob:
+    // primero se pide la URL a vercel.com/api/blob y luego se envía el archivo al almacén.
+    "connect-src 'self' https://vercel.com https://*.blob.vercel-storage.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
